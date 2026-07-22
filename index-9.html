@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>V. CRUZ TATTOO | Book by Deposit</title>
+<!--
+  ============================================================
+  FRONTEND-ONLY DEMO. No backend connected.
+
+  Integration points are marked with comments:
+    [CALENDAR API]  Replace mock availability with Google
+                    Calendar free/busy fetch (via your backend,
+                    never expose the API key client-side).
+    [STRIPE]        Replace the demo pay button with a redirect
+                    to a Stripe Checkout Session created by your
+                    backend. Booking is only confirmed by the
+                    checkout.session.completed webhook.
+    [RESEND]        Emails fire from the backend webhook handler,
+                    nothing to do on the frontend.
+  ============================================================
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#0a0908;
+  --panel:#151110;
+  --panel-2:#1c1715;
+  --line:#2a2320;
+  --bone:#eae3da;
+  --smoke:#93887e;
+  --blood:#d2202f;
+  --blood-deep:#8f111c;
+  --ok:#3fa46a;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion: reduce){
+  html{scroll-behavior:auto}
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}
+body{
+  background:var(--ink);
+  color:var(--bone);
+  font-family:'Inter',system-ui,sans-serif;
+  font-size:16px;
+  line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+}
+a{color:inherit}
+button{font:inherit;cursor:pointer}
+:focus-visible{outline:2px solid var(--blood);outline-offset:2px}
+
+/* ---------- shell ---------- */
+.wrap{max-width:920px;margin:0 auto;padding:0 20px}
+
+header.site{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:20px 0;border-bottom:1px solid var(--line);
+}
+.mark{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:1.5rem;letter-spacing:.14em;
+}
+.mark span{color:var(--blood)}
+nav a{
+  font-family:'IBM Plex Mono',monospace;font-size:.78rem;
+  letter-spacing:.08em;text-transform:uppercase;
+  color:var(--smoke);text-decoration:none;margin-left:22px;
+}
+nav a:hover{color:var(--bone)}
+
+/* ---------- hero ---------- */
+.hero{padding:90px 0 70px;position:relative}
+.hero h1{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:clamp(3.2rem,9vw,6.5rem);
+  line-height:.95;letter-spacing:.02em;
+  max-width:14ch;
+}
+.hero h1 em{font-style:normal;color:var(--blood)}
+.needle{
+  height:2px;width:120px;background:var(--blood);
+  margin:28px 0;position:relative;
+}
+.needle::after{
+  content:"";position:absolute;right:-5px;top:-3px;
+  width:8px;height:8px;background:var(--blood);
+  transform:rotate(45deg);
+}
+.hero p{color:var(--smoke);max-width:46ch;margin-bottom:34px}
+.cta{
+  display:inline-block;background:var(--blood);color:#fff;
+  text-decoration:none;padding:14px 30px;
+  font-family:'Bebas Neue',sans-serif;font-size:1.15rem;
+  letter-spacing:.12em;border:none;
+  transition:background .15s ease;
+}
+.cta:hover{background:var(--blood-deep)}
+.hero .rule-note{
+  margin-top:18px;font-family:'IBM Plex Mono',monospace;
+  font-size:.75rem;color:var(--smoke);letter-spacing:.04em;
+}
+
+/* ---------- booking ---------- */
+section.book{padding:60px 0 90px;border-top:1px solid var(--line)}
+.step-head{
+  display:flex;align-items:baseline;gap:14px;margin-bottom:26px;
+}
+.step-head .no{
+  font-family:'IBM Plex Mono',monospace;font-size:.8rem;
+  color:var(--blood);letter-spacing:.1em;
+}
+.step-head h2{
+  font-family:'Bebas Neue',sans-serif;font-size:1.9rem;
+  letter-spacing:.06em;
+}
+.panel{
+  background:var(--panel);border:1px solid var(--line);
+  padding:28px;margin-bottom:34px;
+}
+
+/* calendar */
+.cal-top{
+  display:flex;justify-content:space-between;align-items:center;
+  margin-bottom:18px;
+}
+.cal-top h3{
+  font-family:'IBM Plex Mono',monospace;font-weight:500;
+  font-size:.9rem;letter-spacing:.1em;text-transform:uppercase;
+}
+.cal-nav{
+  background:none;border:1px solid var(--line);color:var(--bone);
+  width:34px;height:34px;line-height:1;
+}
+.cal-nav:hover:not(:disabled){border-color:var(--blood)}
+.cal-nav:disabled{opacity:.3;cursor:default}
+.cal-grid{
+  display:grid;grid-template-columns:repeat(7,1fr);gap:6px;
+}
+.cal-grid .dow{
+  font-family:'IBM Plex Mono',monospace;font-size:.68rem;
+  color:var(--smoke);text-align:center;padding:6px 0;
+  letter-spacing:.08em;
+}
+.day{
+  aspect-ratio:1;background:var(--panel-2);border:1px solid transparent;
+  color:var(--bone);font-family:'IBM Plex Mono',monospace;
+  font-size:.85rem;position:relative;
+}
+.day:hover:not(:disabled){border-color:var(--blood)}
+.day:disabled{color:#4a423d;cursor:default;background:transparent}
+.day.blocked{color:#4a423d;background:transparent}
+.day.blocked::before,.day.blocked::after{
+  content:"";position:absolute;left:20%;right:20%;top:50%;
+  height:1px;background:var(--blood-deep);opacity:.7;
+}
+.day.blocked::before{transform:rotate(35deg)}
+.day.blocked::after{transform:rotate(-35deg)}
+.day.selected{
+  border:1px solid var(--blood);color:#fff;background:var(--blood-deep);
+}
+.legend{
+  display:flex;gap:22px;margin-top:16px;
+  font-family:'IBM Plex Mono',monospace;font-size:.7rem;color:var(--smoke);
+}
+.legend i{
+  display:inline-block;width:10px;height:10px;margin-right:6px;
+  vertical-align:middle;
+}
+.legend .l-open i{background:var(--panel-2);border:1px solid var(--line)}
+.legend .l-taken i{background:transparent;border:1px solid var(--blood-deep)}
+.legend .l-sel i{background:var(--blood-deep);border:1px solid var(--blood)}
+
+/* time slots */
+.slots{display:flex;flex-wrap:wrap;gap:10px;margin-top:22px;min-height:44px}
+.slots .hint{color:var(--smoke);font-size:.85rem}
+.slot{
+  background:var(--panel-2);border:1px solid var(--line);color:var(--bone);
+  font-family:'IBM Plex Mono',monospace;font-size:.8rem;
+  padding:10px 16px;letter-spacing:.04em;
+}
+.slot:hover:not(:disabled){border-color:var(--blood)}
+.slot:disabled{color:#4a423d;text-decoration:line-through;cursor:default}
+.slot.selected{background:var(--blood-deep);border-color:var(--blood);color:#fff}
+
+/* form */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.field{margin-bottom:16px}
+.field label{
+  display:block;font-family:'IBM Plex Mono',monospace;font-size:.72rem;
+  text-transform:uppercase;letter-spacing:.1em;color:var(--smoke);
+  margin-bottom:7px;
+}
+.field input,.field select,.field textarea{
+  width:100%;background:var(--panel-2);border:1px solid var(--line);
+  color:var(--bone);padding:12px 14px;font:inherit;font-size:.95rem;
+}
+.field input:focus,.field select:focus,.field textarea:focus{
+  outline:none;border-color:var(--blood);
+}
+.field textarea{resize:vertical;min-height:96px}
+.field .err{color:var(--blood);font-size:.75rem;margin-top:5px;display:none}
+.field.invalid input,.field.invalid textarea{border-color:var(--blood)}
+.field.invalid .err{display:block}
+
+/* deposit */
+.summary{
+  font-family:'IBM Plex Mono',monospace;font-size:.85rem;
+  border:1px dashed var(--line);padding:18px;margin-bottom:22px;
+  color:var(--smoke);
+}
+.summary strong{color:var(--bone);font-weight:500}
+.summary .amt{color:var(--blood);font-size:1.05rem}
+.demo-note{
+  background:rgba(210,32,47,.08);border:1px solid var(--blood-deep);
+  padding:12px 16px;font-size:.8rem;color:var(--smoke);
+  font-family:'IBM Plex Mono',monospace;margin-bottom:22px;
+}
+.demo-note b{color:var(--blood);font-weight:500}
+.card-mock input{letter-spacing:.06em}
+.pay-btn{
+  width:100%;background:var(--blood);color:#fff;border:none;
+  padding:16px;font-family:'Bebas Neue',sans-serif;
+  font-size:1.25rem;letter-spacing:.12em;margin-top:8px;
+  transition:background .15s ease;
+}
+.pay-btn:hover:not(:disabled){background:var(--blood-deep)}
+.pay-btn:disabled{opacity:.5;cursor:wait}
+.fine{
+  margin-top:14px;font-size:.75rem;color:var(--smoke);
+  font-family:'IBM Plex Mono',monospace;line-height:1.7;
+}
+
+/* confirmation */
+.confirm{
+  text-align:center;padding:60px 28px;border:1px solid var(--ok);
+  display:none;
+}
+.confirm.show{display:block}
+.confirm .stamp{
+  display:inline-block;border:2px solid var(--ok);color:var(--ok);
+  font-family:'Bebas Neue',sans-serif;font-size:1.6rem;
+  letter-spacing:.18em;padding:8px 26px;transform:rotate(-4deg);
+  margin-bottom:24px;
+}
+.confirm p{color:var(--smoke);max-width:48ch;margin:0 auto 8px}
+.confirm .ref{
+  font-family:'IBM Plex Mono',monospace;color:var(--bone);
+  margin-top:16px;font-size:.85rem;
+}
+
+.hidden{display:none}
+
+/* policy + footer */
+.policy{padding:50px 0;border-top:1px solid var(--line)}
+.policy h2{
+  font-family:'Bebas Neue',sans-serif;font-size:1.6rem;
+  letter-spacing:.06em;margin-bottom:16px;
+}
+.policy p{color:var(--smoke);max-width:60ch;margin-bottom:10px;font-size:.92rem}
+footer.site{
+  border-top:1px solid var(--line);padding:26px 0;
+  display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+  font-family:'IBM Plex Mono',monospace;font-size:.72rem;color:var(--smoke);
+}
+
+@media (max-width:640px){
+  .grid2{grid-template-columns:1fr}
+  .panel{padding:20px}
+  nav a{margin-left:14px}
+}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="site">
+    <div class="mark">V. CRUZ <span>TATTOO</span></div>
+    <nav>
+      <a href="#book">Book</a>
+      <a href="#policy">Policy</a>
+    </nav>
+  </header>
+
+  <section class="hero">
+    <h1>Black &amp; grey realism. <em>Deposit locks the chair.</em></h1>
+    <div class="needle" aria-hidden="true"></div>
+    <p>Pick an open day, choose your time, and put down the deposit. No deposit, no hold. The slot stays open for the next person until payment clears.</p>
+    <a class="cta" href="#book">Book a session</a>
+    <div class="rule-note">Deposit $100 &middot; applied to final price &middot; non-refundable within 72h</div>
+  </section>
+
+  <section class="book" id="book">
+
+    <!-- STEP 1 -->
+    <div class="step-head">
+      <span class="no">01</span>
+      <h2>Pick your day &amp; time</h2>
+    </div>
+    <div class="panel">
+      <div class="cal-top">
+        <button class="cal-nav" id="prevMonth" aria-label="Previous month">&#8249;</button>
+        <h3 id="calTitle">Month</h3>
+        <button class="cal-nav" id="nextMonth" aria-label="Next month">&#8250;</button>
+      </div>
+      <div class="cal-grid" id="calGrid" role="grid" aria-label="Available dates"></div>
+      <div class="legend">
+        <span class="l-open"><i></i>Open</span>
+        <span class="l-taken"><i></i>Taken / closed</span>
+        <span class="l-sel"><i></i>Your pick</span>
+      </div>
+      <div class="slots" id="slots">
+        <span class="hint">Select a day to see open times.</span>
+      </div>
+    </div>
+
+    <!-- STEP 2 -->
+    <div class="step-head">
+      <span class="no">02</span>
+      <h2>Your details</h2>
+    </div>
+    <div class="panel" id="detailsPanel">
+      <div class="grid2">
+        <div class="field" data-key="name">
+          <label for="fName">Full name</label>
+          <input id="fName" type="text" autocomplete="name">
+          <div class="err">Name is required.</div>
+        </div>
+        <div class="field" data-key="email">
+          <label for="fEmail">Email</label>
+          <input id="fEmail" type="email" autocomplete="email">
+          <div class="err">A valid email is required.</div>
+        </div>
+      </div>
+      <div class="grid2">
+        <div class="field" data-key="phone">
+          <label for="fPhone">Phone</label>
+          <input id="fPhone" type="tel" autocomplete="tel">
+          <div class="err">Phone is required.</div>
+        </div>
+        <div class="field">
+          <label for="fSize">Approx. size</label>
+          <select id="fSize">
+            <option>Small (up to 3 in)</option>
+            <option selected>Medium (3 to 6 in)</option>
+            <option>Large (6 in and up)</option>
+            <option>Half sleeve / full day</option>
+          </select>
+        </div>
+      </div>
+      <div class="field" data-key="idea">
+        <label for="fIdea">Piece &amp; placement</label>
+        <textarea id="fIdea" placeholder="What you want and where it goes. Reference images can come by email after booking."></textarea>
+        <div class="err">Tell the artist what you have in mind.</div>
+      </div>
+    </div>
+
+    <!-- STEP 3 -->
+    <div class="step-head">
+      <span class="no">03</span>
+      <h2>Deposit</h2>
+    </div>
+    <div class="panel" id="payPanel">
+      <div class="summary" id="summary">
+        <strong>No session selected yet.</strong><br>
+        Choose a day and time above to see your booking summary.
+      </div>
+
+      <div class="demo-note">
+        <b>DEMO MODE.</b> Stripe is not connected in this build. The button below simulates a successful payment so the client can review the flow. In production this button redirects to Stripe Checkout, and the booking is only confirmed after the payment webhook fires.
+      </div>
+
+      <!-- [STRIPE] In production, remove this mock card block entirely.
+           Stripe Checkout hosts the card form; nothing sensitive
+           ever touches this page. -->
+      <div class="card-mock">
+        <div class="field">
+          <label for="ccNum">Card number</label>
+          <input id="ccNum" type="text" inputmode="numeric" placeholder="4242 4242 4242 4242" maxlength="19">
+        </div>
+        <div class="grid2">
+          <div class="field">
+            <label for="ccExp">Expiry</label>
+            <input id="ccExp" type="text" inputmode="numeric" placeholder="MM / YY" maxlength="7">
+          </div>
+          <div class="field">
+            <label for="ccCvc">CVC</label>
+            <input id="ccCvc" type="text" inputmode="numeric" placeholder="123" maxlength="4">
+          </div>
+        </div>
+      </div>
+
+      <button class="pay-btn" id="payBtn">Pay $100 deposit</button>
+      <div class="fine">
+        Payments are processed by Stripe. Your slot is held only after the deposit clears. You and the artist both get an email confirmation.
+      </div>
+    </div>
+
+    <!-- CONFIRMATION -->
+    <div class="confirm" id="confirmBox" role="status">
+      <div class="stamp">Booked</div>
+      <p id="confirmText">Your deposit cleared and your session is locked in.</p>
+      <p>A confirmation email is on its way to you, and the artist has been notified.</p>
+      <div class="ref" id="confirmRef"></div>
+    </div>
+
+  </section>
+
+  <section class="policy" id="policy">
+    <h2>Deposit policy</h2>
+    <p>The $100 deposit comes off the final price of your tattoo. It holds your chair for the session you booked and nothing else.</p>
+    <p>Reschedule at least 72 hours ahead and the deposit moves with you, one time. No-shows and late cancels forfeit the deposit.</p>
+    <p>Consultations for large-scale work are free. Email first if you are not sure what to book.</p>
+  </section>
+
+  <footer class="site">
+    <span>&copy; 2026 V. Cruz Tattoo</span>
+    <span>Huntsville, AL &middot; @vcruz.ink</span>
+  </footer>
+</div>
+
+<script>
+/* ============================================================
+   CONFIG
+   ============================================================ */
+const DEPOSIT = 100;                       // USD
+const OPEN_SLOTS = ["11:00 AM","1:00 PM","3:30 PM","6:00 PM"];
+const CLOSED_WEEKDAYS = [0,1];             // Sun + Mon closed
+const BOOKING_HORIZON_MONTHS = 2;          // how far out clients can book
+
+/* ============================================================
+   [CALENDAR API] MOCK AVAILABILITY
+   In production, replace this with a fetch to your backend,
+   e.g.  GET /api/availability?month=2026-08
+   The backend calls Google Calendar freebusy.query with the
+   artist's calendar ID and returns blocked dates + taken slots.
+   ============================================================ */
+function isDayBlocked(date){
+  if (CLOSED_WEEKDAYS.includes(date.getDay())) return true;
+  // Deterministic pseudo-random "busy" days to simulate the
+  // artist blocking time off in his own Google Calendar:
+  const seed = date.getFullYear()*372 + date.getMonth()*31 + date.getDate();
+  return (seed * 2654435761 % 97) < 22;    // ~22% of open days busy
+}
+function takenSlotsFor(date){
+  // Simulate some individual time slots already booked.
+  const seed = date.getDate() * (date.getMonth()+2);
+  return OPEN_SLOTS.filter((_,i)=> (seed + i*7) % 5 === 0);
+}
+
+/* ============================================================
+   STATE
+   ============================================================ */
+const today = new Date(); today.setHours(0,0,0,0);
+let viewYear = today.getFullYear();
+let viewMonth = today.getMonth();
+let selectedDate = null;
+let selectedTime = null;
+
+const $ = id => document.getElementById(id);
+const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+const DOWS = ["S","M","T","W","T","F","S"];
+
+/* ============================================================
+   CALENDAR RENDER
+   ============================================================ */
+function monthOffset(y,m){ return (y - today.getFullYear())*12 + (m - today.getMonth()); }
+
+function renderCalendar(){
+  $("calTitle").textContent = MONTHS[viewMonth] + " " + viewYear;
+  $("prevMonth").disabled = monthOffset(viewYear,viewMonth) <= 0;
+  $("nextMonth").disabled = monthOffset(viewYear,viewMonth) >= BOOKING_HORIZON_MONTHS;
+
+  const grid = $("calGrid");
+  grid.innerHTML = "";
+  DOWS.forEach(d=>{
+    const el = document.createElement("div");
+    el.className = "dow"; el.textContent = d;
+    grid.appendChild(el);
+  });
+
+  const first = new Date(viewYear, viewMonth, 1);
+  const daysInMonth = new Date(viewYear, viewMonth+1, 0).getDate();
+  for (let i=0;i<first.getDay();i++){
+    grid.appendChild(document.createElement("div"));
+  }
+  for (let d=1; d<=daysInMonth; d++){
+    const date = new Date(viewYear, viewMonth, d);
+    const btn = document.createElement("button");
+    btn.className = "day";
+    btn.textContent = d;
+    const past = date < today;
+    const blocked = isDayBlocked(date);
+    if (past){ btn.disabled = true; }
+    else if (blocked){ btn.disabled = true; btn.classList.add("blocked"); btn.setAttribute("aria-label","Taken or closed"); }
+    else {
+      btn.addEventListener("click", ()=> selectDay(date, btn));
+      if (selectedDate && date.getTime() === selectedDate.getTime()){
+        btn.classList.add("selected");
+      }
+    }
+    grid.appendChild(btn);
+  }
+}
+
+function selectDay(date, btn){
+  selectedDate = date;
+  selectedTime = null;
+  document.querySelectorAll(".day.selected").forEach(b=>b.classList.remove("selected"));
+  btn.classList.add("selected");
+  renderSlots();
+  updateSummary();
+}
+
+function renderSlots(){
+  const wrap = $("slots");
+  wrap.innerHTML = "";
+  const taken = takenSlotsFor(selectedDate);
+  OPEN_SLOTS.forEach(t=>{
+    const b = document.createElement("button");
+    b.className = "slot"; b.textContent = t;
+    if (taken.includes(t)){ b.disabled = true; }
+    else {
+      b.addEventListener("click", ()=>{
+        selectedTime = t;
+        document.querySelectorAll(".slot.selected").forEach(s=>s.classList.remove("selected"));
+        b.classList.add("selected");
+        updateSummary();
+      });
+    }
+    wrap.appendChild(b);
+  });
+}
+
+$("prevMonth").addEventListener("click", ()=>{
+  viewMonth--; if (viewMonth<0){viewMonth=11;viewYear--;} renderCalendar();
+});
+$("nextMonth").addEventListener("click", ()=>{
+  viewMonth++; if (viewMonth>11){viewMonth=0;viewYear++;} renderCalendar();
+});
+
+/* ============================================================
+   SUMMARY + VALIDATION
+   ============================================================ */
+function fmtDate(d){
+  return d.toLocaleDateString("en-US",{weekday:"long", month:"long", day:"numeric", year:"numeric"});
+}
+function updateSummary(){
+  const s = $("summary");
+  if (selectedDate && selectedTime){
+    s.innerHTML = "<strong>" + fmtDate(selectedDate) + "</strong> at <strong>" + selectedTime +
+      "</strong><br>Deposit due now: <span class='amt'>$" + DEPOSIT + "</span> &middot; applied to final price";
+  } else if (selectedDate){
+    s.innerHTML = "<strong>" + fmtDate(selectedDate) + "</strong><br>Now pick a time above.";
+  } else {
+    s.innerHTML = "<strong>No session selected yet.</strong><br>Choose a day and time above to see your booking summary.";
+  }
+}
+
+function validateDetails(){
+  let ok = true;
+  const checks = {
+    name:  $("fName").value.trim().length > 1,
+    email: /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test($("fEmail").value.trim()),
+    phone: $("fPhone").value.trim().length > 6,
+    idea:  $("fIdea").value.trim().length > 3
+  };
+  document.querySelectorAll(".field[data-key]").forEach(f=>{
+    const key = f.dataset.key;
+    f.classList.toggle("invalid", !checks[key]);
+    if (!checks[key]) ok = false;
+  });
+  return ok;
+}
+
+/* ============================================================
+   [STRIPE] PAYMENT (DEMO)
+   Production flow:
+     1. POST /api/create-checkout-session with the selected
+        date, time, and client details.
+     2. Backend re-checks the slot is still free, creates a
+        Stripe Checkout Session, returns session.url.
+     3. window.location = session.url
+     4. Stripe webhook (checkout.session.completed) confirms
+        the booking, writes the Calendar event, and fires the
+        [RESEND] emails to artist + client.
+   Nothing below simulates step 4's guarantees; it is UI only.
+   ============================================================ */
+$("payBtn").addEventListener("click", async ()=>{
+  if (!selectedDate || !selectedTime){
+    $("summary").scrollIntoView({behavior:"smooth", block:"center"});
+    updateSummary();
+    $("summary").innerHTML = "<strong style='color:var(--blood)'>Pick a day and time first.</strong>";
+    return;
+  }
+  if (!validateDetails()){
+    $("detailsPanel").scrollIntoView({behavior:"smooth", block:"center"});
+    return;
+  }
+  const btn = $("payBtn");
+  btn.disabled = true;
+  btn.textContent = "Processing...";
+  await new Promise(r=>setTimeout(r, 1600));   // fake network + Stripe
+
+  // Simulated success:
+  const ref = "VC-" + Date.now().toString(36).toUpperCase();
+  $("confirmText").innerHTML = "Your deposit cleared. <strong>" + fmtDate(selectedDate) +
+    " at " + selectedTime + "</strong> is locked in for " + $("fName").value.trim().split(" ")[0] + ".";
+  $("confirmRef").textContent = "Reference " + ref + " (demo)";
+  $("payPanel").classList.add("hidden");
+  $("detailsPanel").classList.add("hidden");
+  $("confirmBox").classList.add("show");
+  $("confirmBox").scrollIntoView({behavior:"smooth", block:"center"});
+});
+
+/* init */
+renderCalendar();
+updateSummary();
+</script>
+</body>
+</html>
